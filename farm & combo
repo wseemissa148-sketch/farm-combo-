@@ -16,7 +16,7 @@ _G.Config = {
     AutoFarm = false,
     FastAttack = false,
     EnableFastAttackStop = true,       -- تفعيل/إيقاف ميزة إيقاف الفاست أتاك عند وصول الدم لحد معين[cite: 1]
-    FastAttackStopHealth = 3000,       -- الحد الأدنى لدم الخصم الذي عندها يطفأ الفاست أتاك[cite: 1]
+    FastAttackStopHealth = 3000,       -- الحد الأدنى لدم الخصم (أو النسبة المئوية) الذي عندها يطفأ الفاست أتاك[cite: 1]
     AutoHaki = true,
     UseSkills = true,
     SelectWeapon = "Melee",
@@ -328,7 +328,7 @@ local function AddToggle(parentPage, name, configVar, callback)
     return Button
 end
 
--- حقل إدخال رقمي لتعديل دم الخصم الذي يتوقف عنده الفاست أتاك من الـ UI
+-- حقل إدخال رقمي لتعديل دم الخصم الذي يتوقف عنده الفاست أتاك من الـ UI[cite: 1]
 local function AddNumberInput(parentPage, title, configVar)
     local Frame = Instance.new("Frame")
     Frame.Size = UDim2.new(0.96, 0, 0, 32)
@@ -756,7 +756,7 @@ local function EquipSpecificWeapon(wType)
     end
 end
 
--- Fast Attack Universal 100% مع فحص الدم من الإعدادات المحفوظة
+-- Fast Attack Universal 100% مع الفحص الذكي للدم أو النسبة المئوية
 function FastAttackUniversal()
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
@@ -765,15 +765,24 @@ function FastAttackUniversal()
     local enemies = workspace:FindFirstChild("Enemies")
     
     if enemies then
-        local stopHealth = tonumber(_G.Config.FastAttackStopHealth) or 3000
+        local stopValue = tonumber(_G.Config.FastAttackStopHealth) or 3000
         for _, mob in pairs(enemies:GetChildren()) do
             local hrp = mob:FindFirstChild("HumanoidRootPart")
             local hum = mob:FindFirstChild("Humanoid")
             if hrp and hum and hum.Health > 0 then
                 if (char.HumanoidRootPart.Position - hrp.Position).Magnitude <= 70 then
                     local shouldAttack = true
-                    if _G.Config.EnableFastAttackStop and hum.Health <= stopHealth then
-                        shouldAttack = false
+                    if _G.Config.EnableFastAttackStop then
+                        if stopValue <= 100 then
+                            local healthPercent = (hum.Health / hum.MaxHealth) * 100
+                            if healthPercent <= stopValue then
+                                shouldAttack = false
+                            end
+                        else
+                            if hum.Health <= stopValue then
+                                shouldAttack = false
+                            end
+                        end
                     end
                     
                     if shouldAttack then
@@ -790,10 +799,19 @@ function FastAttackUniversal()
             local hum = plr.Character:FindFirstChild("Humanoid")
             if hrp and hum and hum.Health > 0 then
                 if (char.HumanoidRootPart.Position - hrp.Position).Magnitude <= 70 then
-                    local stopHealth = tonumber(_G.Config.FastAttackStopHealth) or 3000
+                    local stopValue = tonumber(_G.Config.FastAttackStopHealth) or 3000
                     local shouldAttack = true
-                    if _G.Config.EnableFastAttackStop and hum.Health <= stopHealth then
-                        shouldAttack = false
+                    if _G.Config.EnableFastAttackStop then
+                        if stopValue <= 100 then
+                            local healthPercent = (hum.Health / hum.MaxHealth) * 100
+                            if healthPercent <= stopValue then
+                                shouldAttack = false
+                            end
+                        else
+                            if hum.Health <= stopValue then
+                                shouldAttack = false
+                            end
+                        end
                     end
 
                     if shouldAttack then
@@ -989,7 +1007,7 @@ function AddFruitESP(fruit)
 end
 
 function RemoveFruitESP(fruit)
-    local handle = fruit:FindFirstChild("Handle") or fruit:FindFirstChildOfClass("Part") or fruit
+    let handle = fruit:FindFirstChild("Handle") or fruit:FindFirstChildOfClass("Part") or fruit
     if handle and handle:FindFirstChild("FruitESP") then
         handle.FruitESP:Destroy()
     end
