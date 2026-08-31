@@ -16,7 +16,7 @@ _G.Config = {
     AutoFarm = false,
     FastAttack = false,
     EnableFastAttackStop = true,       -- تفعيل/إيقاف ميزة إيقاف الفاست أتاك عند وصول الدم لحد معين[cite: 1]
-    FastAttackStopHealth = 3000,       -- الحد الأدنى لدم الخصم (أو النسبة المئوية) الذي عندها يطفأ الفاست أتاك[cite: 1]
+    FastAttackStopHealth = 3000,       -- الحد الأدنى لدم الخصم أو النسبة المئوية[cite: 1]
     AutoHaki = true,
     UseSkills = true,
     SelectWeapon = "Melee",
@@ -133,17 +133,26 @@ local materialToMob = {
 }
 
 -- ==========================================
--- 2. بناء الواجهة الرسومية (UI Engine)
+-- 2. بناء الواجهة الرسومية (UI Engine - آمن لـ Xeno)
 -- ==========================================
 
 if CoreGui:FindFirstChild("BloxFruitsUltraSaveUI") then
     CoreGui.BloxFruitsUltraSaveUI:Destroy()
 end
+if player.PlayerGui:FindFirstChild("BloxFruitsUltraSaveUI") then
+    player.PlayerGui.BloxFruitsUltraSaveUI:Destroy()
+end
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BloxFruitsUltraSaveUI"
-ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
+
+local successUI = pcall(function()
+    ScreenGui.Parent = CoreGui
+end)
+if not successUI then
+    ScreenGui.Parent = player:WaitForChild("PlayerGui")
+end
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
@@ -484,7 +493,7 @@ tabs[1].Btn.TextColor3 = Color3.fromRGB(0, 170, 255)
 
 AddToggle(FarmTab, "Auto Farm Level", "AutoFarm")
 AddToggle(FarmTab, "Fast Attack Universal 100%", "FastAttack")
-AddToggle(FarmTab, "Enable Fast Attack Stop", "EnableFastAttackStop")  [cite: 1]
+AddToggle(FarmTab, "Enable Fast Attack Stop", "EnableFastAttackStop")[cite: 1]
 AddNumberInput(FarmTab, "Stop Fast Attack At Health", "FastAttackStopHealth")[cite: 1]
 AddToggle(FarmTab, "Auto Buso Haki (Aura)", "AutoHaki")
 AddToggle(FarmTab, "Auto Use Skills", "UseSkills")
@@ -969,7 +978,7 @@ function AddFruitESP(fruit)
         label.Parent = billboard
         label.BackgroundTransparency = 1
         label.Size = UDim2.new(1, 0, 1, 0)
-        label.Text = "🍎 " .. fruit.Name
+        label.Text = "🍎 " + fruit.Name
         label.TextColor3 = Color3.fromRGB(0, 255, 127)
         label.TextScaled = true
         label.Font = Enum.Font.GothamBold
