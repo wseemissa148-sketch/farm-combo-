@@ -563,28 +563,35 @@ function FastAttackUniversal()
     local targets = {}
     local enemies = workspace:FindFirstChild("Enemies")
     
-    if enemies then
+    -- دالة فحص الدم والشروط الخاصة بالإيقاف لكل هدف
+    local function evaluateTarget(hum)
+        if not hum or hum.Health <= 0 then return false end
+        if not _G.Config.EnableFastAttackStop then return true end
+        
         local stopValue = tonumber(_G.Config.FastAttackStopHealth) or 3000
+        
+        -- التحقق إذا كانت القيمة كنسبة مئوية (<= 100) أو كقيمة دم حقيقية
+        if stopValue <= 100 then
+            local maxHealth = hum.MaxHealth > 0 and hum.MaxHealth or 100
+            local healthPercent = (hum.Health / maxHealth) * 100
+            if healthPercent <= stopValue then
+                return false -- إيقاف الهجوم لأن الدم وصل للنسبة المحددة أو أقل
+            end
+        else
+            if hum.Health <= stopValue then
+                return false -- إيقاف الهجوم لأن الدم وصل للرقم المحدد أو أقل
+            end
+        end
+        return true
+    end
+    
+    if enemies then
         for _, mob in pairs(enemies:GetChildren()) do
             local hrp = mob:FindFirstChild("HumanoidRootPart")
             local hum = mob:FindFirstChild("Humanoid")
-            if hrp and hum and hum.Health > 0 then
+            if hrp and hum then
                 if (char.HumanoidRootPart.Position - hrp.Position).Magnitude <= 70 then
-                    local shouldAttack = true
-                    if _G.Config.EnableFastAttackStop then
-                        if stopValue <= 100 then
-                            local healthPercent = (hum.Health / hum.MaxHealth) * 100
-                            if healthPercent <= stopValue then
-                                shouldAttack = false
-                            end
-                        else
-                            if hum.Health <= stopValue then
-                                shouldAttack = false
-                            end
-                        end
-                    end
-                    
-                    if shouldAttack then
+                    if evaluateTarget(hum) then
                         table.insert(targets, hrp)
                     end
                 end
@@ -596,24 +603,9 @@ function FastAttackUniversal()
         if plr ~= player and plr.Character then
             local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
             local hum = plr.Character:FindFirstChild("Humanoid")
-            if hrp and hum and hum.Health > 0 then
+            if hrp and hum then
                 if (char.HumanoidRootPart.Position - hrp.Position).Magnitude <= 70 then
-                    local stopValue = tonumber(_G.Config.FastAttackStopHealth) or 3000
-                    local shouldAttack = true
-                    if _G.Config.EnableFastAttackStop then
-                        if stopValue <= 100 then
-                            local healthPercent = (hum.Health / hum.MaxHealth) * 100
-                            if healthPercent <= stopValue then
-                                shouldAttack = false
-                            end
-                        else
-                            if hum.Health <= stopValue then
-                                shouldAttack = false
-                            end
-                        end
-                    end
-
-                    if shouldAttack then
+                    if evaluateTarget(hum) then
                         table.insert(targets, hrp)
                     end
                 end
