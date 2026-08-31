@@ -15,6 +15,8 @@ local player = Players.LocalPlayer
 _G.Config = {
     AutoFarm = false,
     FastAttack = false,
+    EnableFastAttackStop = true,       -- تفعيل/إيقاف ميزة إيقاف الفاست أتاك عند وصول الدم لحد معين[cite: 1]
+    FastAttackStopHealth = 3000,       -- الحد الأدنى لدم الخصم الذي عندها يطفأ الفاست أتاك (افتراضي 3000)[cite: 1]
     AutoHaki = true,
     UseSkills = true,
     SelectWeapon = "Melee",
@@ -326,6 +328,52 @@ local function AddToggle(parentPage, name, configVar, callback)
     return Button
 end
 
+-- حقل إدخال رقمي لتعديل دم الخصم الذي يتوقف عنده الفاست أتاك
+local function AddNumberInput(parentPage, title, configVar)
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(0.96, 0, 0, 32)
+    Frame.BackgroundColor3 = Color3.fromRGB(24, 27, 38)
+    Frame.Parent = parentPage
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 6)
+    Corner.Parent = Frame
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.6, 0, 1, 0)
+    Label.Text = "  " .. title
+    Label.Font = Enum.Font.GothamMedium
+    Label.TextSize = 10
+    Label.TextColor3 = Color3.fromRGB(200, 200, 200)
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.BackgroundTransparency = 1
+    Label.Parent = Frame
+
+    local TextBox = Instance.new("TextBox")
+    TextBox.Size = UDim2.new(0.35, 0, 0.7, 0)
+    TextBox.Position = UDim2.new(0.62, 0, 0.15, 0)
+    TextBox.Text = tostring(_G.Config[configVar])
+    TextBox.BackgroundColor3 = Color3.fromRGB(35, 40, 52)
+    TextBox.TextColor3 = Color3.fromRGB(0, 170, 255)
+    TextBox.Font = Enum.Font.GothamBold
+    TextBox.TextSize = 10
+    TextBox.Parent = Frame
+
+    local tbCorner = Instance.new("UICorner")
+    tbCorner.CornerRadius = UDim.new(0, 4)
+    tbCorner.Parent = TextBox
+
+    TextBox.FocusLost:Connect(function()
+        local num = tonumber(TextBox.Text)
+        if num then
+            _G.Config[configVar] = num
+            SaveConfig()
+        else
+            TextBox.Text = tostring(_G.Config[configVar])
+        end
+    end)
+end
+
 -- إنشاء قائمة منسدلة قابلة للتمرير (Scrollable Dropdown)
 local function CreateDynamicDropdown(parentPage, title, getOptionsFunc, configVar, onSelectCallback)
     local DropdownFrame = Instance.new("Frame")
@@ -438,9 +486,11 @@ local MiscTab = CreateTab("Visuals & Misc")
 tabs[1].Page.Visible = true
 tabs[1].Btn.TextColor3 = Color3.fromRGB(0, 170, 255)
 
--- Main Farm Page
+-- Main Farm Page (أزرار الفاست أتاك الجديدة مطابقة لطلبك)
 AddToggle(FarmTab, "Auto Farm Level", "AutoFarm")
 AddToggle(FarmTab, "Fast Attack Universal 100%", "FastAttack")
+AddToggle(FarmTab, "Enable Fast Attack Stop", "EnableFastAttackStop")   -- تفعيل إيقاف الفاست أتاك[cite: 1]
+AddNumberInput(FarmTab, "Stop Fast Attack At Health", "FastAttackStopHealth") -- تعديل كمية الدم للخصم[cite: 1]
 AddToggle(FarmTab, "Auto Buso Haki (Aura)", "AutoHaki")
 AddToggle(FarmTab, "Auto Use Skills", "UseSkills")
 CreateDynamicDropdown(FarmTab, "Weapon Type", function() return {"Melee", "Sword", "Blox Fruit", "Gun"} end, "SelectWeapon")
@@ -504,7 +554,7 @@ materialDropdown = CreateDynamicDropdown(MaterialTab, "Select Material", functio
 end, "SelectMaterial")
 
 -- ==========================================
--- PVP Tab (سلس وتخصيص أسلحة)
+-- PVP Tab
 -- ==========================================
 
 AddToggle(PVPTab, "Enable PVP Auto Combo", "TargetPVP")
@@ -540,7 +590,6 @@ RefreshPlayersBtn.MouseButton1Click:Connect(function()
     if playerDropdown then playerDropdown.Refresh() end
 end)
 
--- خيار تحديد السلاح لتعديل سكيلاته بشكل منظم
 local selectedWeaponToEdit = "Melee"
 local SkillsContainer = Instance.new("Frame")
 SkillsContainer.Size = UDim2.new(0.96, 0, 0, 170)
@@ -563,7 +612,6 @@ local function UpdateSkillsUI()
         end
     end
 
-    -- زر تفعيل/إلغاء تفعيل السلاح داخل الكومبو
     local weaponState = _G.Config.ComboWeaponEnabled[selectedWeaponToEdit]
     local WeaponToggleBtn = Instance.new("TextButton")
     WeaponToggleBtn.Size = UDim2.new(0.96, 0, 0, 26)
@@ -584,7 +632,6 @@ local function UpdateSkillsUI()
         UpdateSkillsUI()
     end)
 
-    -- سكيلات السلاح المختاد
     local keys = {"Z", "X", "C", "V", "F"}
     for _, key in ipairs(keys) do
         local skillState = _G.Config.ComboSkills[selectedWeaponToEdit][key]
@@ -620,7 +667,7 @@ end)
 UpdateSkillsUI()
 
 -- ==========================================
--- Teleport Tab (مفتاح التشغيل + Cafe)
+-- Teleport Tab
 -- ==========================================
 
 local islandDropdown
@@ -644,7 +691,6 @@ islandDropdown = CreateDynamicDropdown(TeleportTab, "Select Island", function()
     return list
 end, "SelectIsland")
 
--- زر التنقل أصبح Toggle (تشغيل/إيقاف)
 AddToggle(TeleportTab, "Start Teleport To Island", "IsTeleporting")
 
 -- Visuals
@@ -710,20 +756,29 @@ local function EquipSpecificWeapon(wType)
     end
 end
 
--- Fast Attack Universal 100%
+-- Fast Attack Universal 100% مع فحص الدم (Stop Health Logic)
 function FastAttackUniversal()
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     
     local targets = {}
     local enemies = workspace:FindFirstChild("Enemies")
+    
     if enemies then
         for _, mob in pairs(enemies:GetChildren()) do
             local hrp = mob:FindFirstChild("HumanoidRootPart")
             local hum = mob:FindFirstChild("Humanoid")
             if hrp and hum and hum.Health > 0 then
                 if (char.HumanoidRootPart.Position - hrp.Position).Magnitude <= 70 then
-                    table.insert(targets, hrp)
+                    -- فحص شرط توقف الفاست أتاك بناءً على دم الخصم
+                    local shouldAttack = true
+                    if _G.Config.EnableFastAttackStop and hum.Health <= _G.Config.FastAttackStopHealth then
+                        shouldAttack = false
+                    end
+                    
+                    if shouldAttack then
+                        table.insert(targets, hrp)
+                    end
                 end
             end
         end
@@ -735,7 +790,15 @@ function FastAttackUniversal()
             local hum = plr.Character:FindFirstChild("Humanoid")
             if hrp and hum and hum.Health > 0 then
                 if (char.HumanoidRootPart.Position - hrp.Position).Magnitude <= 70 then
-                    table.insert(targets, hrp)
+                    -- فحص شرط توقف الفاست أتاك للاعبين أيضًا
+                    local shouldAttack = true
+                    if _G.Config.EnableFastAttackStop and hum.Health <= _G.Config.FastAttackStopHealth then
+                        shouldAttack = false
+                    end
+
+                    if shouldAttack then
+                        table.insert(targets, hrp)
+                    end
                 end
             end
         end
@@ -780,7 +843,6 @@ local function ExecuteCustomPVPCombo(targetPlr)
         for _, wType in ipairs(_G.Config.ComboSequence) do
             if not _G.Config.TargetPVP then break end
             
-            -- التأكد من أن السلاح مفعل للكومبو
             if _G.Config.ComboWeaponEnabled[wType] then
                 EquipSpecificWeapon(wType)
                 task.wait(0.05)
@@ -809,14 +871,13 @@ local function ExecuteCustomPVPCombo(targetPlr)
     end
 end
 
--- الحلقة الرئيسية للفارم، التنقل، والكومبو
+-- الحلقة الرئيسية للفارم والتنقل
 task.spawn(function()
     while true do
         task.wait(0.1)
         local char = player.Character
         if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
             
-            -- نظام التنقل Toggle
             if _G.Config.IsTeleporting then
                 local seaIslands = islandsBySea[_G.Config.SelectedIslandSea]
                 if _G.Config.SelectIsland ~= "" and seaIslands and seaIslands[_G.Config.SelectIsland] then
