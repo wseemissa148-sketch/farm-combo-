@@ -2,8 +2,6 @@ local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
 local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
@@ -13,7 +11,6 @@ local player = Players.LocalPlayer
 -- ==========================================
 
 _G.Config = {
-    AutoFarm = false,
     FastAttack = false,
     EnableFastAttackStop = true,       -- تفعيل/إيقاف ميزة إيقاف الفاست أتاك عند وصول الدم لحد معين[cite: 1]
     FastAttackStopHealth = 3000,       -- الحد الأدنى لدم الخصم أو النسبة المئوية[cite: 1]
@@ -21,16 +18,8 @@ _G.Config = {
     UseSkills = true,
     SelectWeapon = "Melee",
     
-    AutoMaterial = false,
-    MaterialMode = "Original Mobs",
-    SelectMaterial = "Bones",
-    SelectedMaterialSea = 1,
-    
     TargetPVP = false,
     SelectedPlayer = "",
-    SelectedIslandSea = 1,
-    SelectIsland = "Cafe",
-    IsTeleporting = false,
     
     ComboSequence = {"Melee", "Blox Fruit", "Sword", "Gun"},
     ComboWeaponEnabled = {
@@ -51,7 +40,7 @@ _G.Config = {
     AttackDelay = 0.01
 }
 
-local configFile = "BloxFruitsConfig.json"
+local configFile = "BloxFruitsShortConfig.json"
 
 local function SaveConfig()
     pcall(function()
@@ -79,72 +68,18 @@ end
 LoadConfig()
 
 -- ==========================================
--- البيانات الشاملة للعوالم الثلاثة
--- ==========================================
-
-local islandsBySea = {
-    [1] = {
-        ["Starter Island"] = Vector3.new(1095, 16, 1420),
-        ["Jungle"] = Vector3.new(-1610, 37, 148),
-        ["Pirate Village"] = Vector3.new(-1130, 4, 3850),
-        ["Desert"] = Vector3.new(1090, 6, 4360),
-        ["Middle Town"] = Vector3.new(-655, 15, 1580),
-        ["Frozen Village"] = Vector3.new(1185, 27, -1185),
-        ["Marine Fortress"] = Vector3.new(-5030, 20, 4320),
-        ["Skypiea"] = Vector3.new(-4880, 718, -2630),
-        ["Prison"] = Vector3.new(4850, 5, 740),
-        ["Colosseum"] = Vector3.new(-1430, 7, -2780),
-        ["Magma Village"] = Vector3.new(-5250, 8, 8850),
-        ["Underwater City"] = Vector3.new(3860, 5, -1925)
-    },
-    [2] = {
-        ["Cafe"] = Vector3.new(-380, 73, 300),
-        ["Green Zone"] = Vector3.new(-2300, 70, -3000),
-        ["Kingdom of Rose"] = Vector3.new(-450, 73, 1500),
-        ["Uship"] = Vector3.new(920, 125, 3280),
-        ["Snow Mountain"] = Vector3.new(600, 400, -5300),
-        ["Hot and Cold"] = Vector3.new(-2500, 15, -3000),
-        ["Ice Castle"] = Vector3.new(5500, 28, -6200),
-        ["Forgotten Island"] = Vector3.new(-3050, 240, -10150)
-    },
-    [3] = {
-        ["Port Town"] = Vector3.new(-2900, 15, 5300),
-        ["Hydra Island"] = Vector3.new(5700, 600, 200),
-        ["Great Tree"] = Vector3.new(2250, 20, -7200),
-        ["Floating Turtle"] = Vector3.new(-12450, 330, -7500),
-        ["Haunted Castle"] = Vector3.new(-9500, 140, 5500),
-        ["Sea of Treats"] = Vector3.new(-2000, 50, -12000)
-    }
-}
-
-local materialsBySea = {
-    [1] = {"Leather", "Angel Wings", "Fish Tail", "Magma Ore", "Vampire Fang", "Mutant Tooth"},
-    [2] = {"Ectoplasm", "Radioactive Material", "Mystic Droplet", "Magma Ore", "Vampire Fang", "Snow Trooper"},
-    [3] = {"Bones", "Dragon Scale", "Mini Tusk", "Conjured Cocoa", "Demonic Feather", "Fool's Gold", "Dragon Tooth"}
-}
-
-local materialToMob = {
-    ["Leather"] = "Pirate", ["Angel Wings"] = "God's Guard", ["Fish Tail"] = "Fishman Warrior",
-    ["Magma Ore"] = "Military Soldier", ["Vampire Fang"] = "Vampire", ["Mutant Tooth"] = "Military Spy",
-    ["Ectoplasm"] = "Ship Officer", ["Radioactive Material"] = "Factory Staff", ["Mystic Droplet"] = "Water Fighter",
-    ["Snow Trooper"] = "Snow Trooper", ["Bones"] = "Reborn Skeleton", ["Dragon Scale"] = "Dragon Crew Warrior",
-    ["Mini Tusk"] = "Mythological Pirate", ["Conjured Cocoa"] = "Cocoa Warrior", ["Demonic Feather"] = "Demonic Soul",
-    ["Fool's Gold"] = "Isle Outlaw", ["Dragon Tooth"] = "Isle Champion"
-}
-
--- ==========================================
 -- 2. بناء الواجهة الرسومية (UI Engine - آمن لـ Xeno)
 -- ==========================================
 
-if CoreGui:FindFirstChild("BloxFruitsUltraSaveUI") then
-    CoreGui.BloxFruitsUltraSaveUI:Destroy()
+if CoreGui:FindFirstChild("BloxFruitsShortUI") then
+    CoreGui.BloxFruitsShortUI:Destroy()
 end
-if player.PlayerGui:FindFirstChild("BloxFruitsUltraSaveUI") then
-    player.PlayerGui.BloxFruitsUltraSaveUI:Destroy()
+if player.PlayerGui:FindFirstChild("BloxFruitsShortUI") then
+    player.PlayerGui.BloxFruitsShortUI:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BloxFruitsUltraSaveUI"
+ScreenGui.Name = "BloxFruitsShortUI"
 ScreenGui.ResetOnSpawn = false
 
 local successUI = pcall(function()
@@ -209,7 +144,7 @@ SideLayout.Parent = Sidebar
 
 local TitleLabel = Instance.new("TextLabel")
 TitleLabel.Size = UDim2.new(1, 0, 0, 35)
-TitleLabel.Text = "HUB WITH SAVE"
+TitleLabel.Text = "SHORT HUB"
 TitleLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextSize = 11
@@ -482,76 +417,19 @@ local function CreateDynamicDropdown(parentPage, title, getOptionsFunc, configVa
     }
 end
 
-local FarmTab = CreateTab("Main Farm")
-local MaterialTab = CreateTab("Material")
+local MainTab = CreateTab("Main Combat")
 local PVPTab = CreateTab("PVP & Combo")
-local TeleportTab = CreateTab("Teleport")
 local MiscTab = CreateTab("Visuals & Misc")
 
 tabs[1].Page.Visible = true
 tabs[1].Btn.TextColor3 = Color3.fromRGB(0, 170, 255)
 
-AddToggle(FarmTab, "Auto Farm Level", "AutoFarm")
-AddToggle(FarmTab, "Fast Attack Universal 100%", "FastAttack")
-AddToggle(FarmTab, "Enable Fast Attack Stop", "EnableFastAttackStop")[cite: 1]
-AddNumberInput(FarmTab, "Stop Fast Attack At Health", "FastAttackStopHealth")[cite: 1]
-AddToggle(FarmTab, "Auto Buso Haki (Aura)", "AutoHaki")
-AddToggle(FarmTab, "Auto Use Skills", "UseSkills")
-CreateDynamicDropdown(FarmTab, "Weapon Type", function() return {"Melee", "Sword", "Blox Fruit", "Gun"} end, "SelectWeapon")
-
-local materialDropdown
-
-local function CreateSeaSelector(parent, configVar, callback)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0.96, 0, 0, 28)
-    frame.BackgroundTransparency = 1
-    frame.Parent = parent
-
-    local layout = Instance.new("UIListLayout")
-    layout.FillDirection = Enum.FillDirection.Horizontal
-    layout.Padding = UDim.new(0, 4)
-    layout.Parent = frame
-
-    for i = 1, 3 do
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0.32, 0, 1, 0)
-        btn.BackgroundColor3 = _G.Config[configVar] == i and Color3.fromRGB(0, 170, 255) or Color3.fromRGB(30, 35, 48)
-        btn.Text = "Sea " .. i
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.Font = Enum.Font.GothamBold
-        btn.TextSize = 9
-        btn.Parent = frame
-
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 5)
-        corner.Parent = btn
-
-        btn.MouseButton1Click:Connect(function()
-            _G.Config[configVar] = i
-            SaveConfig()
-            for _, child in pairs(frame:GetChildren()) do
-                if child:IsA("TextButton") then
-                    child.BackgroundColor3 = Color3.fromRGB(30, 35, 48)
-                end
-            end
-            btn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-            if callback then callback(i) end
-        end)
-    end
-end
-
-AddToggle(MaterialTab, "Auto Farm Material", "AutoMaterial")
-CreateDynamicDropdown(MaterialTab, "Target Mode", function() return {"Original Mobs", "Nearest Mobs"} end, "MaterialMode")
-
-CreateSeaSelector(MaterialTab, "SelectedMaterialSea", function(seaNum)
-    _G.Config.SelectMaterial = materialsBySea[seaNum][1] or ""
-    SaveConfig()
-    if materialDropdown then materialDropdown.Refresh() end
-end)
-
-materialDropdown = CreateDynamicDropdown(MaterialTab, "Select Material", function() 
-    return materialsBySea[_G.Config.SelectedMaterialSea] or {}
-end, "SelectMaterial")
+AddToggle(MainTab, "Fast Attack Universal 100%", "FastAttack")
+AddToggle(MainTab, "Enable Fast Attack Stop", "EnableFastAttackStop") --[cite: 1]
+AddNumberInput(MainTab, "Stop Fast Attack At Health", "FastAttackStopHealth") --[cite: 1]
+AddToggle(MainTab, "Auto Buso Haki (Aura)", "AutoHaki")
+AddToggle(MainTab, "Auto Use Skills", "UseSkills")
+CreateDynamicDropdown(MainTab, "Weapon Type", function() return {"Melee", "Sword", "Blox Fruit", "Gun"} end, "SelectWeapon")
 
 AddToggle(PVPTab, "Enable PVP Auto Combo", "TargetPVP")
 
@@ -662,47 +540,8 @@ end)
 
 UpdateSkillsUI()
 
-local islandDropdown
-
-CreateSeaSelector(TeleportTab, "SelectedIslandSea", function(seaNum)
-    local firstIsland = ""
-    for name, _ in pairs(islandsBySea[seaNum]) do
-        firstIsland = name
-        break
-    end
-    _G.Config.SelectIsland = firstIsland
-    SaveConfig()
-    if islandDropdown then islandDropdown.Refresh() end
-end)
-
-islandDropdown = CreateDynamicDropdown(TeleportTab, "Select Island", function()
-    local list = {}
-    for name, _ in pairs(islandsBySea[_G.Config.SelectedIslandSea] or {}) do
-        table.insert(list, name)
-    end
-    return list
-end, "SelectIsland")
-
-AddToggle(TeleportTab, "Start Teleport To Island", "IsTeleporting")
 AddToggle(MiscTab, "Fruit ESP", "FruitESP")
 AddToggle(MiscTab, "Auto Grab Fruit", "AutoGrab")
-
-local currentTween = nil
-
-local function SmoothMove(targetCFrame)
-    local char = player.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = char.HumanoidRootPart
-    
-    local distance = (hrp.Position - targetCFrame.Position).Magnitude
-    local speed = 300
-    local tweenInfo = TweenInfo.new(distance / speed, Enum.EasingStyle.Linear)
-    
-    if currentTween then currentTween:Cancel() end
-    currentTween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
-    currentTween:Play()
-    return currentTween
-end
 
 task.spawn(function()
     while task.wait(1) do
@@ -716,30 +555,6 @@ task.spawn(function()
         end
     end
 end)
-
-local function EquipSpecificWeapon(wType)
-    local backpack = player:FindFirstChild("Backpack")
-    local char = player.Character
-    if not backpack or not char or not char:FindFirstChild("Humanoid") then return end
-    
-    for _, tool in pairs(backpack:GetChildren()) do
-        if tool:IsA("Tool") then
-            if wType == "Melee" and tool.ToolTip == "Melee" then
-                char.Humanoid:EquipTool(tool)
-                return tool
-            elseif wType == "Sword" and tool.ToolTip == "Sword" then
-                char.Humanoid:EquipTool(tool)
-                return tool
-            elseif wType == "Blox Fruit" and tool.ToolTip == "Blox Fruit" then
-                char.Humanoid:EquipTool(tool)
-                return tool
-            elseif wType == "Gun" and tool.ToolTip == "Gun" then
-                char.Humanoid:EquipTool(tool)
-                return tool
-            end
-        end
-    end
-end
 
 function FastAttackUniversal()
     local char = player.Character
@@ -831,139 +646,6 @@ task.spawn(function()
     end
 end)
 
-local function ExecuteCustomPVPCombo(targetPlr)
-    if not targetPlr or not targetPlr.Character then return end
-    local pHrp = targetPlr.Character:FindFirstChild("HumanoidRootPart")
-    local pHum = targetPlr.Character:FindFirstChild("Humanoid")
-    local char = player.Character
-
-    if pHrp and pHum and pHum.Health > 0 and char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = CFrame.new(pHrp.Position - (pHrp.CFrame.LookVector * 2.5), pHrp.Position)
-        workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, pHrp.Position)
-
-        for _, wType in ipairs(_G.Config.ComboSequence) do
-            if not _G.Config.TargetPVP then break end
-            
-            if _G.Config.ComboWeaponEnabled[wType] then
-                EquipSpecificWeapon(wType)
-                task.wait(0.05)
-
-                local skillSet = _G.Config.ComboSkills[wType]
-                if skillSet then
-                    local keys = {
-                        {Key = Enum.KeyCode.Z, Enabled = skillSet.Z},
-                        {Key = Enum.KeyCode.X, Enabled = skillSet.X},
-                        {Key = Enum.KeyCode.C, Enabled = skillSet.C},
-                        {Key = Enum.KeyCode.V, Enabled = skillSet.V},
-                        {Key = Enum.KeyCode.F, Enabled = skillSet.F}
-                    }
-
-                    for _, kData in ipairs(keys) do
-                        if kData.Enabled then
-                            VirtualInputManager:SendKeyEvent(true, kData.Key, false, game)
-                            task.wait(0.04)
-                            VirtualInputManager:SendKeyEvent(false, kData.Key, false, game)
-                        end
-                    end
-                end
-                task.wait(0.25)
-            end
-        end
-    end
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.1)
-        local char = player.Character
-        if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
-            
-            if _G.Config.IsTeleporting then
-                local seaIslands = islandsBySea[_G.Config.SelectedIslandSea]
-                if _G.Config.SelectIsland ~= "" and seaIslands and seaIslands[_G.Config.SelectIsland] then
-                    local targetPos = seaIslands[_G.Config.SelectIsland]
-                    local hrpPos = char.HumanoidRootPart.Position
-                    if (hrpPos - targetPos).Magnitude > 15 then
-                        SmoothMove(CFrame.new(targetPos + Vector3.new(0, 30, 0)))
-                    else
-                        _G.Config.IsTeleporting = false
-                        if currentTween then currentTween:Cancel() end
-                    end
-                end
-            else
-                if currentTween and not _G.Config.AutoFarm and not _G.Config.AutoMaterial then
-                    currentTween:Cancel()
-                end
-
-                if _G.Config.AutoFarm then
-                    EquipSpecificWeapon(_G.Config.SelectWeapon)
-                    local enemies = workspace:FindFirstChild("Enemies")
-                    local targetMob = nil
-                    
-                    if enemies then
-                        for _, mob in pairs(enemies:GetChildren()) do
-                            local mHum = mob:FindFirstChild("Humanoid")
-                            if mHum and mHum.Health > 0 then
-                                targetMob = mob
-                                break
-                            end
-                        end
-                    end
-
-                    if targetMob and targetMob:FindFirstChild("HumanoidRootPart") then
-                        local mobHrp = targetMob.HumanoidRootPart
-                        local farmPos = mobHrp.CFrame * CFrame.new(0, 7, 0) * CFrame.Angles(math.rad(-90), 0, 0)
-                        SmoothMove(farmPos)
-                    end
-
-                elseif _G.Config.AutoMaterial then
-                    EquipSpecificWeapon(_G.Config.SelectWeapon)
-                    local enemies = workspace:FindFirstChild("Enemies")
-                    local targetMob = nil
-                    local mobName = materialToMob[_G.Config.SelectMaterial] or ""
-
-                    if enemies then
-                        if _G.Config.MaterialMode == "Original Mobs" then
-                            for _, mob in pairs(enemies:GetChildren()) do
-                                local mHum = mob:FindFirstChild("Humanoid")
-                                if mob.Name:find(mobName) and mHum and mHum.Health > 0 then
-                                    targetMob = mob
-                                    break
-                                end
-                            end
-                        elseif _G.Config.MaterialMode == "Nearest Mobs" then
-                            local shortest = math.huge
-                            for _, mob in pairs(enemies:GetChildren()) do
-                                local mHrp = mob:FindFirstChild("HumanoidRootPart")
-                                local mHum = mob:FindFirstChild("Humanoid")
-                                if mHrp and mHum and mHum.Health > 0 then
-                                    local dist = (char.HumanoidRootPart.Position - mHrp.Position).Magnitude
-                                    if dist < shortest then
-                                        shortest = dist
-                                        targetMob = mob
-                                    end
-                                end
-                            end
-                        end
-                    end
-
-                    if targetMob and targetMob:FindFirstChild("HumanoidRootPart") then
-                        local mobHrp = targetMob.HumanoidRootPart
-                        local farmPos = mobHrp.CFrame * CFrame.new(0, 7, 0) * CFrame.Angles(math.rad(-90), 0, 0)
-                        SmoothMove(farmPos)
-                    end
-
-                elseif _G.Config.TargetPVP and _G.Config.SelectedPlayer ~= "" then
-                    local targetPlr = Players:FindFirstChild(_G.Config.SelectedPlayer)
-                    if targetPlr then
-                        ExecuteCustomPVPCombo(targetPlr)
-                    end
-                end
-            end
-        end
-    end
-end)
-
 function AddFruitESP(fruit)
     local handle = fruit:FindFirstChild("Handle") or fruit:FindFirstChildOfClass("Part") or fruit
     if handle and not handle:FindFirstChild("FruitESP") then
@@ -978,7 +660,7 @@ function AddFruitESP(fruit)
         label.Parent = billboard
         label.BackgroundTransparency = 1
         label.Size = UDim2.new(1, 0, 1, 0)
-        label.Text = "🍎 " + fruit.Name
+        label.Text = "🍎 " .. fruit.Name
         label.TextColor3 = Color3.fromRGB(0, 255, 127)
         label.TextScaled = true
         label.Font = Enum.Font.GothamBold
