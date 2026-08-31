@@ -16,7 +16,7 @@ _G.Config = {
     AutoFarm = false,
     FastAttack = false,
     EnableFastAttackStop = true,       -- تفعيل/إيقاف ميزة إيقاف الفاست أتاك عند وصول الدم لحد معين[cite: 1]
-    FastAttackStopHealth = 3000,       -- الحد الأدنى لدم الخصم الذي عندها يطفأ الفاست أتاك (افتراضي 3000)[cite: 1]
+    FastAttackStopHealth = 3000,       -- الحد الأدنى لدم الخصم الذي عندها يطفأ الفاست أتاك[cite: 1]
     AutoHaki = true,
     UseSkills = true,
     SelectWeapon = "Melee",
@@ -30,7 +30,7 @@ _G.Config = {
     SelectedPlayer = "",
     SelectedIslandSea = 1,
     SelectIsland = "Cafe",
-    IsTeleporting = false, -- زر تشغيل/إيقاف التنقل
+    IsTeleporting = false,
     
     ComboSequence = {"Melee", "Blox Fruit", "Sword", "Gun"},
     ComboWeaponEnabled = {
@@ -328,7 +328,7 @@ local function AddToggle(parentPage, name, configVar, callback)
     return Button
 end
 
--- حقل إدخال رقمي لتعديل دم الخصم الذي يتوقف عنده الفاست أتاك
+-- حقل إدخال رقمي لتعديل دم الخصم الذي يتوقف عنده الفاست أتاك من الـ UI
 local function AddNumberInput(parentPage, title, configVar)
     local Frame = Instance.new("Frame")
     Frame.Size = UDim2.new(0.96, 0, 0, 32)
@@ -374,7 +374,7 @@ local function AddNumberInput(parentPage, title, configVar)
     end)
 end
 
--- إنشاء قائمة منسدلة قابلة للتمرير (Scrollable Dropdown)
+-- قائمة منسدلة ديناميكية
 local function CreateDynamicDropdown(parentPage, title, getOptionsFunc, configVar, onSelectCallback)
     local DropdownFrame = Instance.new("Frame")
     DropdownFrame.Size = UDim2.new(0.96, 0, 0, 32)
@@ -486,11 +486,11 @@ local MiscTab = CreateTab("Visuals & Misc")
 tabs[1].Page.Visible = true
 tabs[1].Btn.TextColor3 = Color3.fromRGB(0, 170, 255)
 
--- Main Farm Page (أزرار الفاست أتاك الجديدة مطابقة لطلبك)
+-- Main Farm Page
 AddToggle(FarmTab, "Auto Farm Level", "AutoFarm")
 AddToggle(FarmTab, "Fast Attack Universal 100%", "FastAttack")
 AddToggle(FarmTab, "Enable Fast Attack Stop", "EnableFastAttackStop")   -- تفعيل إيقاف الفاست أتاك[cite: 1]
-AddNumberInput(FarmTab, "Stop Fast Attack At Health", "FastAttackStopHealth") -- تعديل كمية الدم للخصم[cite: 1]
+AddNumberInput(FarmTab, "Stop Fast Attack At Health", "FastAttackStopHealth") -- تعديل كمية الدم مباشرة من الـ UI[cite: 1]
 AddToggle(FarmTab, "Auto Buso Haki (Aura)", "AutoHaki")
 AddToggle(FarmTab, "Auto Use Skills", "UseSkills")
 CreateDynamicDropdown(FarmTab, "Weapon Type", function() return {"Melee", "Sword", "Blox Fruit", "Gun"} end, "SelectWeapon")
@@ -756,7 +756,7 @@ local function EquipSpecificWeapon(wType)
     end
 end
 
--- Fast Attack Universal 100% مع فحص الدم (Stop Health Logic)
+-- Fast Attack Universal 100% مع فحص الدم من الإعدادات المحفوظة
 function FastAttackUniversal()
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
@@ -765,14 +765,14 @@ function FastAttackUniversal()
     local enemies = workspace:FindFirstChild("Enemies")
     
     if enemies then
+        local stopHealth = tonumber(_G.Config.FastAttackStopHealth) or 3000
         for _, mob in pairs(enemies:GetChildren()) do
             local hrp = mob:FindFirstChild("HumanoidRootPart")
             local hum = mob:FindFirstChild("Humanoid")
             if hrp and hum and hum.Health > 0 then
                 if (char.HumanoidRootPart.Position - hrp.Position).Magnitude <= 70 then
-                    -- فحص شرط توقف الفاست أتاك بناءً على دم الخصم
                     local shouldAttack = true
-                    if _G.Config.EnableFastAttackStop and hum.Health <= _G.Config.FastAttackStopHealth then
+                    if _G.Config.EnableFastAttackStop and hum.Health <= stopHealth then
                         shouldAttack = false
                     end
                     
@@ -790,9 +790,9 @@ function FastAttackUniversal()
             local hum = plr.Character:FindFirstChild("Humanoid")
             if hrp and hum and hum.Health > 0 then
                 if (char.HumanoidRootPart.Position - hrp.Position).Magnitude <= 70 then
-                    -- فحص شرط توقف الفاست أتاك للاعبين أيضًا
+                    local stopHealth = tonumber(_G.Config.FastAttackStopHealth) or 3000
                     local shouldAttack = true
-                    if _G.Config.EnableFastAttackStop and hum.Health <= _G.Config.FastAttackStopHealth then
+                    if _G.Config.EnableFastAttackStop and hum.Health <= stopHealth then
                         shouldAttack = false
                     end
 
@@ -829,7 +829,7 @@ task.spawn(function()
     end
 end)
 
--- PVP Combo Lock-On Engine
+-- PVP Combo Engine
 local function ExecuteCustomPVPCombo(targetPlr)
     if not targetPlr or not targetPlr.Character then return end
     local pHrp = targetPlr.Character:FindFirstChild("HumanoidRootPart")
@@ -871,7 +871,7 @@ local function ExecuteCustomPVPCombo(targetPlr)
     end
 end
 
--- الحلقة الرئيسية للفارم والتنقل
+-- الفارم والتنقل الأساسي
 task.spawn(function()
     while true do
         task.wait(0.1)
