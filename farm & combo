@@ -163,7 +163,6 @@ MainStroke.Color = Color3.fromRGB(0, 170, 255)
 MainStroke.Thickness = 1.5
 MainStroke.Parent = MainFrame
 
--- تحريك النافذة
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -328,7 +327,6 @@ local function AddToggle(parentPage, name, configVar, callback)
     return Button
 end
 
--- حقل إدخال رقمي لتعديل دم الخصم الذي يتوقف عنده الفاست أتاك من الـ UI[cite: 1]
 local function AddNumberInput(parentPage, title, configVar)
     local Frame = Instance.new("Frame")
     Frame.Size = UDim2.new(0.96, 0, 0, 32)
@@ -374,7 +372,6 @@ local function AddNumberInput(parentPage, title, configVar)
     end)
 end
 
--- قائمة منسدلة ديناميكية
 local function CreateDynamicDropdown(parentPage, title, getOptionsFunc, configVar, onSelectCallback)
     local DropdownFrame = Instance.new("Frame")
     DropdownFrame.Size = UDim2.new(0.96, 0, 0, 32)
@@ -476,7 +473,6 @@ local function CreateDynamicDropdown(parentPage, title, getOptionsFunc, configVa
     }
 end
 
--- إنشاء التبويبات
 local FarmTab = CreateTab("Main Farm")
 local MaterialTab = CreateTab("Material")
 local PVPTab = CreateTab("PVP & Combo")
@@ -486,18 +482,13 @@ local MiscTab = CreateTab("Visuals & Misc")
 tabs[1].Page.Visible = true
 tabs[1].Btn.TextColor3 = Color3.fromRGB(0, 170, 255)
 
--- Main Farm Page
 AddToggle(FarmTab, "Auto Farm Level", "AutoFarm")
 AddToggle(FarmTab, "Fast Attack Universal 100%", "FastAttack")
-AddToggle(FarmTab, "Enable Fast Attack Stop", "EnableFastAttackStop")   -- تفعيل إيقاف الفاست أتاك[cite: 1]
-AddNumberInput(FarmTab, "Stop Fast Attack At Health", "FastAttackStopHealth") -- تعديل كمية الدم مباشرة من الـ UI[cite: 1]
+AddToggle(FarmTab, "Enable Fast Attack Stop", "EnableFastAttackStop")  [cite: 1]
+AddNumberInput(FarmTab, "Stop Fast Attack At Health", "FastAttackStopHealth")[cite: 1]
 AddToggle(FarmTab, "Auto Buso Haki (Aura)", "AutoHaki")
 AddToggle(FarmTab, "Auto Use Skills", "UseSkills")
 CreateDynamicDropdown(FarmTab, "Weapon Type", function() return {"Melee", "Sword", "Blox Fruit", "Gun"} end, "SelectWeapon")
-
--- ==========================================
--- Material Page
--- ==========================================
 
 local materialDropdown
 
@@ -552,10 +543,6 @@ end)
 materialDropdown = CreateDynamicDropdown(MaterialTab, "Select Material", function() 
     return materialsBySea[_G.Config.SelectedMaterialSea] or {}
 end, "SelectMaterial")
-
--- ==========================================
--- PVP Tab
--- ==========================================
 
 AddToggle(PVPTab, "Enable PVP Auto Combo", "TargetPVP")
 
@@ -666,10 +653,6 @@ end)
 
 UpdateSkillsUI()
 
--- ==========================================
--- Teleport Tab
--- ==========================================
-
 local islandDropdown
 
 CreateSeaSelector(TeleportTab, "SelectedIslandSea", function(seaNum)
@@ -692,14 +675,8 @@ islandDropdown = CreateDynamicDropdown(TeleportTab, "Select Island", function()
 end, "SelectIsland")
 
 AddToggle(TeleportTab, "Start Teleport To Island", "IsTeleporting")
-
--- Visuals
 AddToggle(MiscTab, "Fruit ESP", "FruitESP")
 AddToggle(MiscTab, "Auto Grab Fruit", "AutoGrab")
-
--- ==========================================
--- 3. المحركات والدوال المساعدة
--- ==========================================
 
 local currentTween = nil
 
@@ -718,7 +695,6 @@ local function SmoothMove(targetCFrame)
     return currentTween
 end
 
--- Auto Buso Haki
 task.spawn(function()
     while task.wait(1) do
         if _G.Config.AutoHaki then
@@ -756,7 +732,6 @@ local function EquipSpecificWeapon(wType)
     end
 end
 
--- Fast Attack Universal 100% مع الفحص الذكي للدم أو النسبة المئوية
 function FastAttackUniversal()
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
@@ -847,7 +822,6 @@ task.spawn(function()
     end
 end)
 
--- PVP Combo Engine
 local function ExecuteCustomPVPCombo(targetPlr)
     if not targetPlr or not targetPlr.Character then return end
     local pHrp = targetPlr.Character:FindFirstChild("HumanoidRootPart")
@@ -889,7 +863,6 @@ local function ExecuteCustomPVPCombo(targetPlr)
     end
 end
 
--- الفارم والتنقل الأساسي
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -982,7 +955,6 @@ task.spawn(function()
     end
 end)
 
--- Fruit ESP & Auto Grab
 function AddFruitESP(fruit)
     local handle = fruit:FindFirstChild("Handle") or fruit:FindFirstChildOfClass("Part") or fruit
     if handle and not handle:FindFirstChild("FruitESP") then
@@ -1007,7 +979,7 @@ function AddFruitESP(fruit)
 end
 
 function RemoveFruitESP(fruit)
-    let handle = fruit:FindFirstChild("Handle") or fruit:FindFirstChildOfClass("Part") or fruit
+    local handle = fruit:FindFirstChild("Handle") or fruit:FindFirstChildOfClass("Part") or fruit
     if handle and handle:FindFirstChild("FruitESP") then
         handle.FruitESP:Destroy()
     end
