@@ -425,7 +425,7 @@ tabs[1].Page.Visible = true
 tabs[1].Btn.TextColor3 = Color3.fromRGB(0, 170, 255)
 
 AddToggle(MainTab, "Fast Attack Universal 100%", "FastAttack")
-AddToggle(MainTab, "Enable Fast Attack Stop", "EnableFastAttackStop") --[cite: 1]
+AddToggle(MainTab, "Enable Fast Attack Stop (Players)", "EnableFastAttackStop") --[cite: 1]
 AddNumberInput(MainTab, "Stop Fast Attack At Health", "FastAttackStopHealth") --[cite: 1]
 AddToggle(MainTab, "Auto Buso Haki (Aura)", "AutoHaki")
 AddToggle(MainTab, "Auto Use Skills", "UseSkills")
@@ -563,49 +563,44 @@ function FastAttackUniversal()
     local targets = {}
     local enemies = workspace:FindFirstChild("Enemies")
     
-    -- دالة فحص الدم والشروط الخاصة بالإيقاف لكل هدف
-    local function evaluateTarget(hum)
-        if not hum or hum.Health <= 0 then return false end
-        if not _G.Config.EnableFastAttackStop then return true end
-        
-        local stopValue = tonumber(_G.Config.FastAttackStopHealth) or 3000
-        
-        -- التحقق إذا كانت القيمة كنسبة مئوية (<= 100) أو كقيمة دم حقيقية
-        if stopValue <= 100 then
-            local maxHealth = hum.MaxHealth > 0 and hum.MaxHealth or 100
-            local healthPercent = (hum.Health / maxHealth) * 100
-            if healthPercent <= stopValue then
-                return false -- إيقاف الهجوم لأن الدم وصل للنسبة المحددة أو أقل
-            end
-        else
-            if hum.Health <= stopValue then
-                return false -- إيقاف الهجوم لأن الدم وصل للرقم المحدد أو أقل
-            end
-        end
-        return true
-    end
-    
+    -- 1. الفحص الخاص بالوحوش والبوسات (لا يتوقفون أبداً، يضربون للنهاية)
     if enemies then
         for _, mob in pairs(enemies:GetChildren()) do
             local hrp = mob:FindFirstChild("HumanoidRootPart")
             local hum = mob:FindFirstChild("Humanoid")
-            if hrp and hum then
+            if hrp and hum and hum.Health > 0 then
                 if (char.HumanoidRootPart.Position - hrp.Position).Magnitude <= 70 then
-                    if evaluateTarget(hum) then
-                        table.insert(targets, hrp)
-                    end
+                    table.insert(targets, hrp) -- إضافتهم دائماً بدون شروط دم
                 end
             end
         end
     end
 
+    -- 2. الفحص الخاص باللاعبين (يخضعون لشروط التوقف المحددة)
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= player and plr.Character then
             local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
             local hum = plr.Character:FindFirstChild("Humanoid")
-            if hrp and hum then
+            if hrp and hum and hum.Health > 0 then
                 if (char.HumanoidRootPart.Position - hrp.Position).Magnitude <= 70 then
-                    if evaluateTarget(hum) then
+                    local shouldAttackPlayer = true
+                    
+                    if _G.Config.EnableFastAttackStop then
+                        local stopValue = tonumber(_G.Config.FastAttackStopHealth) or 3000
+                        if stopValue <= 100 then
+                            local maxHealth = hum.MaxHealth > 0 and hum.MaxHealth or 100
+                            local healthPercent = (hum.Health / maxHealth) * 100
+                            if healthPercent <= stopValue then
+                                shouldAttackPlayer = false
+                            end
+                        else
+                            if hum.Health <= stopValue then
+                                shouldAttackPlayer = false
+                            end
+                        end
+                    end
+                    
+                    if shouldAttackPlayer then
                         table.insert(targets, hrp)
                     end
                 end
