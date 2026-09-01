@@ -3,6 +3,8 @@ local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
+local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 
@@ -12,8 +14,8 @@ local player = Players.LocalPlayer
 
 _G.Config = {
     FastAttack = false,
-    EnableFastAttackStop = true,       -- تفعيل/إيقاف ميزة إيقاف الفاست أتاك عند وصول الدم لحد معين[cite: 1]
-    FastAttackStopHealth = 3000,       -- الحد الأدنى لدم الخصم أو النسبة المئوية[cite: 1]
+    EnableFastAttackStop = true,       
+    FastAttackStopHealth = 3000,       
     AutoHaki = true,
     UseSkills = true,
     SelectWeapon = "Melee",
@@ -37,7 +39,11 @@ _G.Config = {
     
     FruitESP = false,
     AutoGrab = false,
-    AttackDelay = 0.01
+    AttackDelay = 0.01,
+    
+    -- إعدادات ميزات جزيرة الكتسوني (Kitsune Island & Mirage)
+    KitsuneESP = true,
+    AutoCollectAzureEmbers = false
 }
 
 local configFile = "BloxFruitsShortConfig.json"
@@ -68,7 +74,7 @@ end
 LoadConfig()
 
 -- ==========================================
--- 2. بناء الواجهة الرسومية (UI Engine - آمن لـ Xeno)
+-- 2. بناء الواجهة الرسومية (UI Engine)
 -- ==========================================
 
 if CoreGui:FindFirstChild("BloxFruitsShortUI") then
@@ -91,7 +97,7 @@ end
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 530, 0, 370)
+MainFrame.Size = UDim2.new(0, 530, 0, 390)
 MainFrame.Position = UDim2.new(0.5, -265, 0.2, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 17, 23)
 MainFrame.BorderSizePixel = 0
@@ -271,277 +277,141 @@ local function AddToggle(parentPage, name, configVar, callback)
     return Button
 end
 
-local function AddNumberInput(parentPage, title, configVar)
-    local Frame = Instance.new("Frame")
-    Frame.Size = UDim2.new(0.96, 0, 0, 32)
-    Frame.BackgroundColor3 = Color3.fromRGB(24, 27, 38)
-    Frame.Parent = parentPage
-
-    local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0, 6)
-    Corner.Parent = Frame
-
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(0.6, 0, 1, 0)
-    Label.Text = "  " .. title
-    Label.Font = Enum.Font.GothamMedium
-    Label.TextSize = 10
-    Label.TextColor3 = Color3.fromRGB(200, 200, 200)
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.BackgroundTransparency = 1
-    Label.Parent = Frame
-
-    local TextBox = Instance.new("TextBox")
-    TextBox.Size = UDim2.new(0.35, 0, 0.7, 0)
-    TextBox.Position = UDim2.new(0.62, 0, 0.15, 0)
-    TextBox.Text = tostring(_G.Config[configVar])
-    TextBox.BackgroundColor3 = Color3.fromRGB(35, 40, 52)
-    TextBox.TextColor3 = Color3.fromRGB(0, 170, 255)
-    TextBox.Font = Enum.Font.GothamBold
-    TextBox.TextSize = 10
-    TextBox.Parent = Frame
-
-    local tbCorner = Instance.new("UICorner")
-    tbCorner.CornerRadius = UDim.new(0, 4)
-    tbCorner.Parent = TextBox
-
-    TextBox.FocusLost:Connect(function()
-        local num = tonumber(TextBox.Text)
-        if num then
-            _G.Config[configVar] = num
-            SaveConfig()
-        else
-            TextBox.Text = tostring(_G.Config[configVar])
-        end
-    end)
-end
-
-local function CreateDynamicDropdown(parentPage, title, getOptionsFunc, configVar, onSelectCallback)
-    local DropdownFrame = Instance.new("Frame")
-    DropdownFrame.Size = UDim2.new(0.96, 0, 0, 32)
-    DropdownFrame.BackgroundColor3 = Color3.fromRGB(24, 27, 38)
-    DropdownFrame.ClipsDescendants = true
-    DropdownFrame.Parent = parentPage
-
-    local FrameCorner = Instance.new("UICorner")
-    FrameCorner.CornerRadius = UDim.new(0, 6)
-    FrameCorner.Parent = DropdownFrame
-
-    local MainBtn = Instance.new("TextButton")
-    MainBtn.Size = UDim2.new(1, 0, 0, 32)
-    MainBtn.BackgroundTransparency = 1
-    MainBtn.Text = "  " .. title .. ": " .. tostring(_G.Config[configVar]) .. "  ▼"
-    MainBtn.TextColor3 = Color3.fromRGB(0, 170, 255)
-    MainBtn.Font = Enum.Font.GothamBold
-    MainBtn.TextSize = 9
-    MainBtn.TextXAlignment = Enum.TextXAlignment.Left
-    MainBtn.Parent = DropdownFrame
-
-    local OptionsHolder = Instance.new("ScrollingFrame")
-    OptionsHolder.Position = UDim2.new(0, 4, 0, 32)
-    OptionsHolder.Size = UDim2.new(1, -8, 0, 0)
-    OptionsHolder.BackgroundTransparency = 1
-    OptionsHolder.ScrollBarThickness = 3
-    OptionsHolder.Visible = false
-    OptionsHolder.Parent = DropdownFrame
-
-    local HolderLayout = Instance.new("UIListLayout")
-    HolderLayout.Padding = UDim.new(0, 3)
-    HolderLayout.Parent = OptionsHolder
-
-    local isOpen = false
-
-    local function RebuildOptions()
-        for _, child in pairs(OptionsHolder:GetChildren()) do
-            if child:IsA("TextButton") then child:Destroy() end
-        end
-        
-        local currentOptions = getOptionsFunc()
-        local itemHeight = 24
-        local maxVisibleItems = 5
-        local visibleCount = math.min(#currentOptions, maxVisibleItems)
-        local containerHeight = visibleCount * (itemHeight + 3)
-
-        OptionsHolder.Size = UDim2.new(1, -8, 0, containerHeight)
-        OptionsHolder.CanvasSize = UDim2.new(0, 0, 0, #currentOptions * (itemHeight + 3))
-
-        for _, opt in ipairs(currentOptions) do
-            local OptBtn = Instance.new("TextButton")
-            OptBtn.Size = UDim2.new(0.98, 0, 0, itemHeight)
-            OptBtn.BackgroundColor3 = Color3.fromRGB(32, 36, 50)
-            OptBtn.Text = tostring(opt)
-            OptBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
-            OptBtn.Font = Enum.Font.GothamMedium
-            OptBtn.TextSize = 9
-            OptBtn.Parent = OptionsHolder
-
-            local OptCorner = Instance.new("UICorner")
-            OptCorner.CornerRadius = UDim.new(0, 5)
-            OptCorner.Parent = OptBtn
-
-            OptBtn.MouseButton1Click:Connect(function()
-                _G.Config[configVar] = opt
-                SaveConfig()
-                MainBtn.Text = "  " .. title .. ": " .. tostring(_G.Config[configVar]) .. "  ▼"
-                isOpen = false
-                OptionsHolder.Visible = false
-                DropdownFrame.Size = UDim2.new(0.96, 0, 0, 32)
-                if onSelectCallback then onSelectCallback(opt) end
-            end)
-        end
-        return containerHeight
-    end
-
-    MainBtn.MouseButton1Click:Connect(function()
-        isOpen = not isOpen
-        if isOpen then
-            local containerHeight = RebuildOptions()
-            OptionsHolder.Visible = true
-            DropdownFrame.Size = UDim2.new(0.96, 0, 0, 36 + containerHeight)
-            MainBtn.Text = "  " .. title .. ": " .. tostring(_G.Config[configVar]) .. "  ▲"
-        else
-            OptionsHolder.Visible = false
-            DropdownFrame.Size = UDim2.new(0.96, 0, 0, 32)
-            MainBtn.Text = "  " .. title .. ": " .. tostring(_G.Config[configVar]) .. "  ▼"
-        end
-    end)
-
-    return {
-        Refresh = function()
-            MainBtn.Text = "  " .. title .. ": " .. tostring(_G.Config[configVar]) .. "  ▼"
-            if isOpen then 
-                local containerHeight = RebuildOptions()
-                DropdownFrame.Size = UDim2.new(0.96, 0, 0, 36 + containerHeight)
-            end
-        end
-    }
-end
-
 local MainTab = CreateTab("Main Combat")
 local PVPTab = CreateTab("PVP & Combo")
+local KitsuneTab = CreateTab("Kitsune & Moon") -- تبويب جديد خاص بجزيرة الكتسوني والقمر
 local MiscTab = CreateTab("Visuals & Misc")
 
 tabs[1].Page.Visible = true
 tabs[1].Btn.TextColor3 = Color3.fromRGB(0, 170, 255)
 
 AddToggle(MainTab, "Fast Attack Universal 100%", "FastAttack")
-AddToggle(MainTab, "Enable Fast Attack Stop (Players)", "EnableFastAttackStop") --[cite: 1]
-AddNumberInput(MainTab, "Stop Fast Attack At Health", "FastAttackStopHealth") --[cite: 1]
+AddToggle(MainTab, "Enable Fast Attack Stop (Players)", "EnableFastAttackStop")[cite: 1]
 AddToggle(MainTab, "Auto Buso Haki (Aura)", "AutoHaki")
 AddToggle(MainTab, "Auto Use Skills", "UseSkills")
-CreateDynamicDropdown(MainTab, "Weapon Type", function() return {"Melee", "Sword", "Blox Fruit", "Gun"} end, "SelectWeapon")
 
 AddToggle(PVPTab, "Enable PVP Auto Combo", "TargetPVP")
 
-local playerDropdown = CreateDynamicDropdown(PVPTab, "Target Player", function()
-    local list = {}
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= player then table.insert(list, p.Name) end
-    end
-    return #list > 0 and list or {"No Players"}
-end, "SelectedPlayer")
+AddToggle(MiscTab, "Fruit ESP", "FruitESP")
+AddToggle(MiscTab, "Auto Grab Fruit", "AutoGrab")
 
-local RefreshPlayersBtn = Instance.new("TextButton")
-RefreshPlayersBtn.Size = UDim2.new(0.96, 0, 0, 28)
-RefreshPlayersBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-RefreshPlayersBtn.Text = "🔄 REFRESH PLAYERS LIST"
-RefreshPlayersBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-RefreshPlayersBtn.Font = Enum.Font.GothamBold
-RefreshPlayersBtn.TextSize = 9
-RefreshPlayersBtn.Parent = PVPTab
+-- ==========================================
+-- 3. ميزات جزيرة الكتسوني، الشعلات، والـ Full Moon
+-- ==========================================
 
-local RefreshCorner = Instance.new("UICorner")
-RefreshCorner.CornerRadius = UDim.new(0, 6)
-RefreshCorner.Parent = RefreshPlayersBtn
+local InfoBoxFrame = Instance.new("Frame")
+InfoBoxFrame.Size = UDim2.new(0.96, 0, 0, 130)
+InfoBoxFrame.BackgroundColor3 = Color3.fromRGB(20, 23, 32)
+InfoBoxFrame.Parent = KitsuneTab
 
-RefreshPlayersBtn.MouseButton1Click:Connect(function()
-    local currentPlayers = {}
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= player then table.insert(currentPlayers, p.Name) end
-    end
-    _G.Config.SelectedPlayer = #currentPlayers > 0 and currentPlayers[1] or "No Players"
-    SaveConfig()
-    if playerDropdown then playerDropdown.Refresh() end
-end)
+local InfoBoxCorner = Instance.new("UICorner")
+InfoBoxCorner.CornerRadius = UDim.new(0, 6)
+InfoBoxCorner.Parent = InfoBoxFrame
 
-local selectedWeaponToEdit = "Melee"
-local SkillsContainer = Instance.new("Frame")
-SkillsContainer.Size = UDim2.new(0.96, 0, 0, 170)
-SkillsContainer.BackgroundColor3 = Color3.fromRGB(20, 23, 32)
-SkillsContainer.Parent = PVPTab
+local InfoLayout = Instance.new("UIListLayout")
+InfoLayout.Padding = UDim.new(0, 4)
+InfoLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+InfoLayout.Parent = InfoBoxFrame
 
-local SkillsContainerCorner = Instance.new("UICorner")
-SkillsContainerCorner.CornerRadius = UDim.new(0, 6)
-SkillsContainerCorner.Parent = SkillsContainer
+local function CreateStatusLabel(text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(0.94, 0, 0, 24)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 10
+    lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Text = text
+    lbl.Parent = InfoBoxFrame
+    return lbl
+end
 
-local SkillsLayout = Instance.new("UIListLayout")
-SkillsLayout.Padding = UDim.new(0, 4)
-SkillsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-SkillsLayout.Parent = SkillsContainer
+local KitsuneStatusLbl = CreateStatusLabel("🦊 Kitsune Island: Checking...")
+local FullMoonStatusLbl = CreateStatusLabel("🌕 Full Moon: Checking...")
+local MoonPhaseLbl = CreateStatusLabel("🌙 Moon Phase: Checking...")
+local EmbersCountLbl = CreateStatusLabel("🔥 Azure Embers (الشعلات): 0")
 
-local function UpdateSkillsUI()
-    for _, child in pairs(SkillsContainer:GetChildren()) do
-        if not child:IsA("UIListLayout") and not child:IsA("UICorner") then
-            child:Destroy()
-        end
-    end
+AddToggle(KitsuneTab, "Kitsune Island ESP", "KitsuneESP")
+AddToggle(KitsuneTab, "Auto Collect Azure Embers (الشعلات)", "AutoCollectAzureEmbers")
 
-    local weaponState = _G.Config.ComboWeaponEnabled[selectedWeaponToEdit]
-    local WeaponToggleBtn = Instance.new("TextButton")
-    WeaponToggleBtn.Size = UDim2.new(0.96, 0, 0, 26)
-    WeaponToggleBtn.BackgroundColor3 = weaponState and Color3.fromRGB(0, 170, 255) or Color3.fromRGB(60, 60, 60)
-    WeaponToggleBtn.Text = "Use " .. selectedWeaponToEdit .. " In Combo: " .. (weaponState and "YES" or "NO")
-    WeaponToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    WeaponToggleBtn.Font = Enum.Font.GothamBold
-    WeaponToggleBtn.TextSize = 9
-    WeaponToggleBtn.Parent = SkillsContainer
-
-    local WCorner = Instance.new("UICorner")
-    WCorner.CornerRadius = UDim.new(0, 5)
-    WCorner.Parent = WeaponToggleBtn
-
-    WeaponToggleBtn.MouseButton1Click:Connect(function()
-        _G.Config.ComboWeaponEnabled[selectedWeaponToEdit] = not _G.Config.ComboWeaponEnabled[selectedWeaponToEdit]
-        SaveConfig()
-        UpdateSkillsUI()
-    end)
-
-    local keys = {"Z", "X", "C", "V", "F"}
-    for _, key in ipairs(keys) do
-        local skillState = _G.Config.ComboSkills[selectedWeaponToEdit][key]
-        local SkillBtn = Instance.new("TextButton")
-        SkillBtn.Size = UDim2.new(0.96, 0, 0, 22)
-        SkillBtn.BackgroundColor3 = skillState and Color3.fromRGB(0, 140, 220) or Color3.fromRGB(35, 40, 52)
-        SkillBtn.Text = "  Skill [" .. key .. "]: " .. (skillState and "ON" or "OFF")
-        SkillBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        SkillBtn.Font = Enum.Font.GothamMedium
-        SkillBtn.TextSize = 9
-        SkillBtn.TextXAlignment = Enum.TextXAlignment.Left
-        SkillBtn.Parent = SkillsContainer
-
-        local SCorner = Instance.new("UICorner")
-        SCorner.CornerRadius = UDim.new(0, 4)
-        SCorner.Parent = SkillBtn
-
-        SkillBtn.MouseButton1Click:Connect(function()
-            _G.Config.ComboSkills[selectedWeaponToEdit][key] = not _G.Config.ComboSkills[selectedWeaponToEdit][key]
-            SaveConfig()
-            UpdateSkillsUI()
-        end)
+-- وظيفة حساب حالة القمر والوقت المتبقي للـ Full Moon
+local function GetMoonInfo()
+    local clockTime = Lighting.ClockTime
+    local moonPhase = Lighting:GetMoonPhase()
+    -- في لعبة Blox Fruits، الفل مون يحدث غالباً عندما يكون وقت اللعبة ليلاً متقدماً أو عبر حسابات الأطوار
+    local isFullMoon = (moonPhase == Enum.MoonPhase.FullMoon) or (clockTime >= 0 and clockTime < 5)
+    
+    local moonText = tostring(moonPhase):gsub("Enum.MoonPhase.", "")
+    if isFullMoon then
+        return "YES (متاح الآن!)", moonText
+    else
+        return "NO (غير مرسبن)", moonText
     end
 end
 
-CreateDynamicDropdown(PVPTab, "Edit Weapon Combo Skills", function()
-    return {"Melee", "Sword", "Blox Fruit", "Gun"}
-end, "SelectWeapon", function(opt)
-    selectedWeaponToEdit = opt
-    UpdateSkillsUI()
+-- وظيفة التحقق من وجود جزيرة الكتسوني أو الميراج في العالم
+local function CheckKitsuneIsland()
+    local targetIsland = Workspace:FindFirstChild("KitsuneIsland") or Workspace:FindFirstChild("SeaEvent") or Workspace:FindFirstChild("MirageIsland")
+    -- البحث في الخريطة عن أي جزء يخص الكتسوني
+    for _, v in pairs(Workspace:GetChildren()) do
+        if v.Name:lower():find("kitsune") or v.Name:lower():find("kitsuneisland") then
+            return "Found (مرسبنة وفي العالم! 🦊)"
+        end
+    end
+    return "Not Found (غير موجودة حالياً)"
+end
+
+-- تحديث معلومات الواجهة للكتسوني والقمر باستمرار
+task.spawn(function()
+    while task.wait(1) do
+        pcall(function()
+            local kitsuneState = CheckKitsuneIsland()
+            local fullMoonState, phaseName = GetMoonInfo()
+            
+            KitsuneStatusLbl.Text = "🦊 Kitsune Island: " .. kitsuneState
+            FullMoonStatusLbl.Text = "🌕 Full Moon: " .. fullMoonState
+            MoonPhaseLbl.Text = "🌙 Moon Phase: " .. phaseName
+            
+            -- عد الشعلات الزرقاء (Azure Embers) في المجلدات أو العالم
+            local embersCount = 0
+            for _, v in pairs(Workspace:GetDescendants()) do
+                if v.Name:lower():find("ember") or v.Name:lower():find("blueember") or v.Name:lower():find("azure") then
+                    embersCount = embersCount + 1
+                    if _G.Config.KitsuneESP and not v:FindFirstChild("EmberESP") then
+                        local bill = Instance.new("BillboardGui")
+                        bill.Name = "EmberESP"
+                        bill.Size = UDim2.new(0, 50, 0, 50)
+                        bill.AlwaysOnTop = true
+                        bill.Adornee = v:IsA("Model") and v.PrimaryPart or (v:IsA("BasePart") and v or nil)
+                        
+                        local txt = Instance.new("TextLabel")
+                        txt.Size = UDim2.new(1, 0, 1, 0)
+                        txt.BackgroundTransparency = 1
+                        txt.Text = "💙"
+                        txt.TextScaled = true
+                        txt.Parent = bill
+                        if bill.Adornee then
+                            bill.Parent = bill.Adornee
+                        end
+                    end
+                    
+                    -- جمع الشعلات الزرقاء تلقائياً إذا كان الخيار مفعل
+                    if _G.Config.AutoCollectAzureEmbers and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        local part = v:IsA("Model") and v.PrimaryPart or (v:IsA("BasePart") and v or nil)
+                        if part then
+                            player.Character.HumanoidRootPart.CFrame = part.CFrame
+                        end
+                    end
+                end
+            end
+            EmbersCountLbl.Text = "🔥 Azure Embers (الشعلات): " .. tostring(embersCount)
+        end)
+    end
 end)
 
-UpdateSkillsUI()
-
-AddToggle(MiscTab, "Fruit ESP", "FruitESP")
-AddToggle(MiscTab, "Auto Grab Fruit", "AutoGrab")
+-- ==========================================
+-- 4. الأنظمة الأساسية (Fast Attack & Haki)
+-- ==========================================
 
 task.spawn(function()
     while task.wait(1) do
@@ -561,22 +431,20 @@ function FastAttackUniversal()
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     
     local targets = {}
-    local enemies = workspace:FindFirstChild("Enemies")
+    local enemies = Workspace:FindFirstChild("Enemies")
     
-    -- 1. الفحص الخاص بالوحوش والبوسات (لا يتوقفون أبداً، يضربون للنهاية)
     if enemies then
         for _, mob in pairs(enemies:GetChildren()) do
             local hrp = mob:FindFirstChild("HumanoidRootPart")
             local hum = mob:FindFirstChild("Humanoid")
             if hrp and hum and hum.Health > 0 then
                 if (char.HumanoidRootPart.Position - hrp.Position).Magnitude <= 70 then
-                    table.insert(targets, hrp) -- إضافتهم دائماً بدون شروط دم
+                    table.insert(targets, hrp)
                 end
             end
         end
     end
 
-    -- 2. الفحص الخاص باللاعبين (يخضعون لشروط التوقف المحددة)
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= player and plr.Character then
             local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
@@ -584,22 +452,12 @@ function FastAttackUniversal()
             if hrp and hum and hum.Health > 0 then
                 if (char.HumanoidRootPart.Position - hrp.Position).Magnitude <= 70 then
                     local shouldAttackPlayer = true
-                    
                     if _G.Config.EnableFastAttackStop then
                         local stopValue = tonumber(_G.Config.FastAttackStopHealth) or 3000
-                        if stopValue <= 100 then
-                            local maxHealth = hum.MaxHealth > 0 and hum.MaxHealth or 100
-                            local healthPercent = (hum.Health / maxHealth) * 100
-                            if healthPercent <= stopValue then
-                                shouldAttackPlayer = false
-                            end
-                        else
-                            if hum.Health <= stopValue then
-                                shouldAttackPlayer = false
-                            end
+                        if hum.Health <= stopValue then
+                            shouldAttackPlayer = false
                         end
                     end
-                    
                     if shouldAttackPlayer then
                         table.insert(targets, hrp)
                     end
@@ -633,6 +491,7 @@ task.spawn(function()
     end
 end)
 
+-- نظام الفواكه ESP والالتقاط
 function AddFruitESP(fruit)
     local handle = fruit:FindFirstChild("Handle") or fruit:FindFirstChildOfClass("Part") or fruit
     if handle and not handle:FindFirstChild("FruitESP") then
@@ -666,7 +525,7 @@ end
 task.spawn(function()
     while task.wait(0.5) do
         local char = player.Character
-        for _, item in pairs(workspace:GetChildren()) do
+        for _, item in pairs(Workspace:GetChildren()) do
             if item:IsA("Tool") and (item.Name:find("Fruit") or item:FindFirstChild("Handle")) then
                 if _G.Config.FruitESP then
                     AddFruitESP(item)
