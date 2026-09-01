@@ -1,5 +1,4 @@
 local Players = game:GetService("Players")
-local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
@@ -7,6 +6,7 @@ local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
 -- ==========================================
 -- 1. المتغيرات والإعدادات ونظام الحفظ
@@ -41,7 +41,6 @@ _G.Config = {
     AutoGrab = false,
     AttackDelay = 0.01,
     
-    -- إعدادات ميزات جزيرة الكتسوني (Kitsune Island & Mirage)
     KitsuneESP = true,
     AutoCollectAzureEmbers = false
 }
@@ -77,23 +76,28 @@ LoadConfig()
 -- 2. بناء الواجهة الرسومية (UI Engine)
 -- ==========================================
 
-if CoreGui:FindFirstChild("BloxFruitsShortUI") then
-    CoreGui.BloxFruitsShortUI:Destroy()
-end
-if player.PlayerGui:FindFirstChild("BloxFruitsShortUI") then
-    player.PlayerGui.BloxFruitsShortUI:Destroy()
+if playerGui:FindFirstChild("BloxFruitsShortUI") then
+    playerGui.BloxFruitsShortUI:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BloxFruitsShortUI"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = playerGui
 
-local successUI = pcall(function()
-    ScreenGui.Parent = CoreGui
-end)
-if not successUI then
-    ScreenGui.Parent = player:WaitForChild("PlayerGui")
-end
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0, 75, 0, 30)
+ToggleBtn.Position = UDim2.new(0.02, 0, 0.1, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 23, 32)
+ToggleBtn.Text = "MENU"
+ToggleBtn.TextColor3 = Color3.fromRGB(0, 170, 255)
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextSize = 11
+ToggleBtn.Parent = ScreenGui
+
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 8)
+ToggleCorner.Parent = ToggleBtn
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
@@ -102,6 +106,7 @@ MainFrame.Position = UDim2.new(0.5, -265, 0.2, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 17, 23)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
+MainFrame.Visible = true
 MainFrame.Parent = ScreenGui
 
 local MainCorner = Instance.new("UICorner")
@@ -113,6 +118,7 @@ MainStroke.Color = Color3.fromRGB(0, 170, 255)
 MainStroke.Thickness = 1.5
 MainStroke.Parent = MainFrame
 
+-- نظام سحب النافذة (Dragging)
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -132,6 +138,10 @@ UserInputService.InputChanged:Connect(function(input)
         local delta = input.Position - dragStart
         MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
+end)
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
 end)
 
 local Sidebar = Instance.new("Frame")
@@ -162,24 +172,6 @@ ContentArea.Size = UDim2.new(1, -135, 1, -10)
 ContentArea.Position = UDim2.new(0, 135, 0, 5)
 ContentArea.BackgroundTransparency = 1
 ContentArea.Parent = MainFrame
-
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 75, 0, 30)
-ToggleBtn.Position = UDim2.new(0.02, 0, 0.1, 0)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(20, 23, 32)
-ToggleBtn.Text = "MENU"
-ToggleBtn.TextColor3 = Color3.fromRGB(0, 170, 255)
-ToggleBtn.Font = Enum.Font.GothamBold
-ToggleBtn.TextSize = 11
-ToggleBtn.Parent = ScreenGui
-
-local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.CornerRadius = UDim.new(0, 8)
-ToggleCorner.Parent = ToggleBtn
-
-ToggleBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
 
 local tabs = {}
 
@@ -279,7 +271,7 @@ end
 
 local MainTab = CreateTab("Main Combat")
 local PVPTab = CreateTab("PVP & Combo")
-local KitsuneTab = CreateTab("Kitsune & Moon") -- تبويب جديد خاص بجزيرة الكتسوني والقمر
+local KitsuneTab = CreateTab("Kitsune & Moon")
 local MiscTab = CreateTab("Visuals & Misc")
 
 tabs[1].Page.Visible = true
@@ -334,13 +326,10 @@ local EmbersCountLbl = CreateStatusLabel("🔥 Azure Embers (الشعلات): 0"
 AddToggle(KitsuneTab, "Kitsune Island ESP", "KitsuneESP")
 AddToggle(KitsuneTab, "Auto Collect Azure Embers (الشعلات)", "AutoCollectAzureEmbers")
 
--- وظيفة حساب حالة القمر والوقت المتبقي للـ Full Moon
 local function GetMoonInfo()
     local clockTime = Lighting.ClockTime
     local moonPhase = Lighting:GetMoonPhase()
-    -- في لعبة Blox Fruits، الفل مون يحدث غالباً عندما يكون وقت اللعبة ليلاً متقدماً أو عبر حسابات الأطوار
     local isFullMoon = (moonPhase == Enum.MoonPhase.FullMoon) or (clockTime >= 0 and clockTime < 5)
-    
     local moonText = tostring(moonPhase):gsub("Enum.MoonPhase.", "")
     if isFullMoon then
         return "YES (متاح الآن!)", moonText
@@ -349,10 +338,7 @@ local function GetMoonInfo()
     end
 end
 
--- وظيفة التحقق من وجود جزيرة الكتسوني أو الميراج في العالم
 local function CheckKitsuneIsland()
-    local targetIsland = Workspace:FindFirstChild("KitsuneIsland") or Workspace:FindFirstChild("SeaEvent") or Workspace:FindFirstChild("MirageIsland")
-    -- البحث في الخريطة عن أي جزء يخص الكتسوني
     for _, v in pairs(Workspace:GetChildren()) do
         if v.Name:lower():find("kitsune") or v.Name:lower():find("kitsuneisland") then
             return "Found (مرسبنة وفي العالم! 🦊)"
@@ -361,7 +347,6 @@ local function CheckKitsuneIsland()
     return "Not Found (غير موجودة حالياً)"
 end
 
--- تحديث معلومات الواجهة للكتسوني والقمر باستمرار
 task.spawn(function()
     while task.wait(1) do
         pcall(function()
@@ -372,7 +357,6 @@ task.spawn(function()
             FullMoonStatusLbl.Text = "🌕 Full Moon: " .. fullMoonState
             MoonPhaseLbl.Text = "🌙 Moon Phase: " .. phaseName
             
-            -- عد الشعلات الزرقاء (Azure Embers) في المجلدات أو العالم
             local embersCount = 0
             for _, v in pairs(Workspace:GetDescendants()) do
                 if v.Name:lower():find("ember") or v.Name:lower():find("blueember") or v.Name:lower():find("azure") then
@@ -395,7 +379,6 @@ task.spawn(function()
                         end
                     end
                     
-                    -- جمع الشعلات الزرقاء تلقائياً إذا كان الخيار مفعل
                     if _G.Config.AutoCollectAzureEmbers and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                         local part = v:IsA("Model") and v.PrimaryPart or (v:IsA("BasePart") and v or nil)
                         if part then
@@ -491,7 +474,6 @@ task.spawn(function()
     end
 end)
 
--- نظام الفواكه ESP والالتقاط
 function AddFruitESP(fruit)
     local handle = fruit:FindFirstChild("Handle") or fruit:FindFirstChildOfClass("Part") or fruit
     if handle and not handle:FindFirstChild("FruitESP") then
