@@ -13,8 +13,8 @@ local player = Players.LocalPlayer
 
 _G.Config = {
     FastAttack = false,
-    EnableFastAttackStop = true,       -- تفعيل/إيقاف ميزة إيقاف الفاست أتاك عند وصول الدم لحد معين[cite: 1]
-    FastAttackStopHealth = 3000,       -- الحد الأدنى لدم الخصم أو النسبة المئوية[cite: 1]
+    EnableFastAttackStop = true,       
+    FastAttackStopHealth = 3000,       
     AutoHaki = true,
     UseSkills = true,
     SelectWeapon = "Melee",
@@ -40,10 +40,13 @@ _G.Config = {
     AutoGrab = false,
     AttackDelay = 0.01,
     
-    -- إعدادات جزيرة الكتسوني والفل مون والشعلات الزرقاء الجديدة
     KitsuneESP = false,
     BlueFlameESP = false,
-    AutoGrabBlueFlame = false
+    AutoGrabBlueFlame = false,
+
+    -- الإضافات الجديدة
+    AntiSeatKick = false,     -- منع القيام من مقعد السفينة وإرجاعك إليه تلقائياً
+    SeaVisionLevel6 = false   -- رؤية واضحة في البحر والمستويات العالية (بدون لاق)
 }
 
 local configFile = "BloxFruitsShortConfig.json"
@@ -97,7 +100,7 @@ end
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 530, 0, 370)
+MainFrame.Size = UDim2.new(0, 530, 0, 390)
 MainFrame.Position = UDim2.new(0.5, -265, 0.2, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 17, 23)
 MainFrame.BorderSizePixel = 0
@@ -426,14 +429,14 @@ end
 local MainTab = CreateTab("Main Combat")
 local PVPTab = CreateTab("PVP & Combo")
 local MiscTab = CreateTab("Visuals & Misc")
-local KitsuneTab = CreateTab("Kitsune & Moon") -- تبويب جديد خاص بجزيرة الكتسوني والفل مون
+local KitsuneTab = CreateTab("Kitsune & Moon") 
 
 tabs[1].Page.Visible = true
 tabs[1].Btn.TextColor3 = Color3.fromRGB(0, 170, 255)
 
 AddToggle(MainTab, "Fast Attack Universal 100%", "FastAttack")
-AddToggle(MainTab, "Enable Fast Attack Stop (Players)", "EnableFastAttackStop") --[cite: 1]
-AddNumberInput(MainTab, "Stop Fast Attack At Health", "FastAttackStopHealth") --[cite: 1]
+AddToggle(MainTab, "Enable Fast Attack Stop (Players)", "EnableFastAttackStop") 
+AddNumberInput(MainTab, "Stop Fast Attack At Health", "FastAttackStopHealth") 
 AddToggle(MainTab, "Auto Buso Haki (Aura)", "AutoHaki")
 AddToggle(MainTab, "Auto Use Skills", "UseSkills")
 CreateDynamicDropdown(MainTab, "Weapon Type", function() return {"Melee", "Sword", "Blox Fruit", "Gun"} end, "SelectWeapon")
@@ -547,14 +550,21 @@ end)
 
 UpdateSkillsUI()
 
+-- إضافات تبويب المرئيات والميزات العامة (مع كبسات لكل اشي)
 AddToggle(MiscTab, "Fruit ESP", "FruitESP")
 AddToggle(MiscTab, "Auto Grab Fruit", "AutoGrab")
+AddToggle(MiscTab, "Anti-Seat Kick (Stay on Ship)", "AntiSeatKick")
+AddToggle(MiscTab, "Level 6 Sea Vision (No Lag)", "SeaVisionLevel6", function(state)
+    if not state then
+        Lighting.FogEnd = 100000
+        Lighting.Brightness = 2
+    end
+end)
 
 -- ==========================================
--- إضافات جزيرة الكتسوني، الفل مون، والشعلات الزرقاء
+-- إضافات جزيرة الكتسوني والفل مون
 -- ==========================================
 
--- عنصر عرض المعلومات (Status Dashboard) داخل تبويب الكتسوني
 local StatusDisplayFrame = Instance.new("Frame")
 StatusDisplayFrame.Size = UDim2.new(0.96, 0, 0, 110)
 StatusDisplayFrame.BackgroundColor3 = Color3.fromRGB(20, 23, 32)
@@ -590,23 +600,63 @@ AddToggle(KitsuneTab, "Kitsune Island ESP", "KitsuneESP")
 AddToggle(KitsuneTab, "Blue Flames ESP", "BlueFlameESP")
 AddToggle(KitsuneTab, "Auto Collect Blue Flames", "AutoGrabBlueFlame")
 
--- نظام تحديث حالة الفل مون وجزيرة الكتسوني والشعلات
+-- ==========================================
+-- 3. الأنظمة التشغيلية (Anti-Seat & Sea Vision & Moon)
+-- ==========================================
+
+-- نظام منع الخروج من مقعد السفينة والعودة إليه فوريًا عند التعرض للضرب
+local lastSeat = nil
+task.spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            if _G.Config.AntiSeatKick then
+                local char = player.Character
+                if char and char:FindFirstChild("Humanoid") then
+                    local humanoid = char.Humanoid
+                    local seatPart = humanoid.SeatPart
+                    
+                    if seatPart then
+                        lastSeat = seatPart -- حفظ المقعد الحالي
+                    elseif lastSeat and lastSeat.Parent and lastSeat:IsA("Seat") or lastSeat:IsA("VehicleSeat") then
+                        -- إذا قام اللاعب أو أخرجه أي هجوم من المقعد، يتم إرجاعه فوراً
+                        if (seatPart == nil or seatPart ~= lastSeat) then
+                            lastSeat:Sit(humanoid)
+                        end
+                    end
+                end
+            else
+                lastSeat = nil
+            end
+        end)
+    end
+end)
+
+-- نظام رؤية المستوى السادس في البحر (بدون لاق)
 task.spawn(function()
     while task.wait(1) do
         pcall(function()
-            -- 1. فحص الفل مون (Full Moon Status & ClockTime)
+            if _G.Config.SeaVisionLevel6 then
+                Lighting.FogEnd = 999999
+                Lighting.Brightness = 3
+                Lighting.GlobalShadows = false
+                Lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 150)
+            end
+        end)
+    end
+end)
+
+task.spawn(function()
+    while task.wait(1) do
+        pcall(function()
             local clockTime = Lighting.ClockTime
-            local moonPhase = "Normal/Waning"
-            -- في بلو فريتس غالباً الفل مون يحدث عندما يكون الـ ClockTime بين 0 و 5 أو اعتماداً على شكل القمر
             if clockTime >= 0 and clockTime < 6 then
-                moonStatusLbl.Text = "🌕 Full Moon: Active / Night (" .. math.floor(clockTime) .. "h)"
+                MoonStatusLbl.Text = "🌕 Full Moon: Active / Night (" .. math.floor(clockTime) .. "h)"
                 MoonStatusLbl.TextColor3 = Color3.fromRGB(0, 255, 127)
             else
-                moonStatusLbl.Text = "🌗 Moon Phase: Day / Normal (" .. math.floor(clockTime) .. "h)"
+                MoonStatusLbl.Text = "🌗 Moon Phase: Day / Normal (" .. math.floor(clockTime) .. "h)"
                 MoonStatusLbl.TextColor3 = Color3.fromRGB(200, 200, 200)
             end
 
-            -- 2. فحص جزيرة الكتسوني (Kitsune Island) في الـ Workspace
             local kitsuneFound = false
             for _, obj in pairs(workspace:GetChildren()) do
                 if obj.Name:lower():find("kitsune") or obj.Name:lower():find("kitsuneisland") then
@@ -616,14 +666,13 @@ task.spawn(function()
             end
 
             if kitsuneFound then
-                KitsuneStatusLbl.Text = "🦊 Kitsune Island: SPAWNED! [موجودة الان]"
+                KitsuneStatusLbl.Text = "🦊 Kitsune Island: SPAWNED!"
                 KitsuneStatusLbl.TextColor3 = Color3.fromRGB(255, 128, 0)
             else
-                KitsuneStatusLbl.Text = "🦊 Kitsune Island: Not Spawned [غير موجودة]"
+                KitsuneStatusLbl.Text = "🦊 Kitsune Island: Not Spawned"
                 KitsuneStatusLbl.TextColor3 = Color3.fromRGB(255, 80, 80)
             end
 
-            -- 3. عد الشعلات الزرقاء (Blue Flames / Azure Embers)
             local flameCount = 0
             for _, obj in pairs(workspace:GetChildren()) do
                 if obj.Name:lower():find("blue") or obj.Name:lower():find("flame") or obj.Name:lower():find("ember") or obj.Name:lower():find("fire") then
@@ -635,7 +684,6 @@ task.spawn(function()
     end
 end)
 
--- وظيفة ESP للشعلات الزرقاء وجزيرة الكتسوني
 task.spawn(function()
     while task.wait(0.5) do
         pcall(function()
@@ -643,7 +691,6 @@ task.spawn(function()
             for _, obj in pairs(workspace:GetChildren()) do
                 local name = obj.Name:lower()
                 
-                -- معالجة جزيرة الكتسوني
                 if _G.Config.KitsuneESP and (name:find("kitsune")) then
                     local part = obj:FindFirstChildWhichIsA("BasePart")
                     if part and not part:FindFirstChild("KitsuneESP") then
@@ -665,7 +712,6 @@ task.spawn(function()
                     end
                 end
 
-                -- معالجة الشعلات الزرقاء (Blue Flames / Embers)
                 if name:find("blue") or name:find("ember") or name:find("flame") then
                     local part = obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
                     if part then
@@ -689,7 +735,6 @@ task.spawn(function()
                             part.BlueFlameESP:Destroy()
                         end
 
-                        -- تجميع الشعلات الزرقاء تلقائياً (Auto Collect)
                         if _G.Config.AutoGrabBlueFlame and char and char:FindFirstChild("HumanoidRootPart") then
                             if (char.HumanoidRootPart.Position - part.Position).Magnitude <= 300 then
                                 char.HumanoidRootPart.CFrame = part.CFrame
